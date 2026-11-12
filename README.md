@@ -1,4 +1,5 @@
 # 🏎️ Porsche Sales Dashboard
+![Preview da Dashboard](preview.png)
 
 Este projeto foi desenvolvido como parte do desafio da Digital Innovation One (DIO). O objetivo foi transformar uma base de dados de vendas da Porsche (sanitizada) em uma dashboard interativa, publicada na web, sem as limitações do Excel.
 
