@@ -1,195 +1,181 @@
-# Porsche Sales Sanitization Schema
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Porsche Sales Dashboard</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+  body { font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; }
+  .chart-box { position: relative; height: 320px; }
+</style>
+</head>
+<body class="bg-slate-100 text-slate-800">
 
-> Columns Data map
+<header class="bg-[#0b0b0b] text-white">
+  <div class="max-w-7xl mx-auto px-4 py-6 flex items-center justify-between">
+    <div>
+      <h1 class="text-2xl font-bold tracking-tight">Porsche Sales Dashboard</h1>
+      <p class="text-slate-400 text-sm">100 vendas · dados sanitizados</p>
+    </div>
+    <div class="text-right text-xs text-slate-400">
+      <div id="dataQuality" class="font-mono"></div>
+    </div>
+  </div>
+</header>
 
-## Canonical input columns
+<section class="max-w-7xl mx-auto px-4 py-4">
+  <div class="bg-white rounded-xl shadow-sm p-4 flex flex-wrap gap-4 items-end">
+    <div>
+      <label class="block text-xs font-semibold text-slate-500 mb-1">Modelo</label>
+      <select id="filterModel" class="border border-slate-300 rounded-lg px-3 py-2 text-sm min-w-[200px]">
+        <option value="">Todos os modelos</option>
+      </select>
+    </div>
+    <div>
+      <label class="block text-xs font-semibold text-slate-500 mb-1">Estado</label>
+      <select id="filterState" class="border border-slate-300 rounded-lg px-3 py-2 text-sm min-w-[150px]">
+        <option value="">Todos os estados</option>
+      </select>
+    </div>
+    <button id="resetFilters" class="ml-auto text-sm text-slate-500 hover:text-slate-800 underline">
+      Limpar filtros
+    </button>
+  </div>
+</section>
 
-| Column | Required | Description | Example raw values |
-|---|---:|---|---|
-| `sale_id` | yes | Unique sale record ID | `1`, `86` |
-| `sale_date` | yes | Raw sales date | `2024-13-05`, `02/05/24`, `July 15th, 2024` |
-| `customer_name` | yes | Customer name | `John  Smith`, `MARY johnson` |
-| `porsche_model` | yes | Porsche model and trim | `911 Carrera`, `Macan Electric` |
-| `model_year` | yes | Vehicle model year | `2023`, `20-20`, `two thousand twenty two` |
-| `sale_price` | yes | Sale price in messy USD formats | `$985,000.00`, `188k USD` |
-| `vehicle_mileage` | yes | Vehicle mileage in messy miles/km formats | `12,500 miles`, `KM 15.200`, `new` |
-| `payment_method` | yes | Payment method | `CreditCard`, `bank-transfer`, `crypto payment` |
-| `city` | yes | City | `new york`, `San Jose` |
-| `state` | yes | US state name or abbreviation | `ny`, `California` |
-| `salesperson` | yes | Salesperson name | `William  Clark`, `SARAH lee` |
-| `delivery_status` | yes | Delivery status | `Delivered!!!`, `in-transit`, `DELIVERD` |
+<section class="max-w-7xl mx-auto px-4 grid grid-cols-2 md:grid-cols-3 gap-4">
+  <div class="bg-white rounded-xl shadow-sm p-4">
+    <div class="text-xs font-semibold text-slate-500 uppercase">Vendas</div>
+    <div id="kpiCount" class="text-2xl font-bold text-slate-900 mt-1">—</div>
+  </div>
+  <div class="bg-white rounded-xl shadow-sm p-4">
+    <div class="text-xs font-semibold text-slate-500 uppercase">Receita total</div>
+    <div id="kpiRevenue" class="text-2xl font-bold text-emerald-700 mt-1">—</div>
+  </div>
+  <div class="bg-white rounded-xl shadow-sm p-4">
+    <div class="text-xs font-semibold text-slate-500 uppercase">Ticket médio</div>
+    <div id="kpiAvg" class="text-2xl font-bold text-slate-900 mt-1">—</div>
+  </div>
+</section>
 
-## Sanitized output columns
+<section class="max-w-7xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+  <div class="bg-white rounded-xl shadow-sm p-5 lg:col-span-2">
+    <h2 class="font-bold text-slate-800 mb-1">P1 · Receita por modelo</h2>
+    <p class="text-xs text-slate-500 mb-3">Onde está o dinheiro.</p>
+    <div class="chart-box"><canvas id="chartModelRevenue"></canvas></div>
+  </div>
+  <div class="bg-white rounded-xl shadow-sm p-5">
+    <h2 class="font-bold text-slate-800 mb-1">P2 · Formas de pagamento</h2>
+    <p class="text-xs text-slate-500 mb-3">Risco operacional.</p>
+    <div class="chart-box"><canvas id="chartPayment"></canvas></div>
+  </div>
+  <div class="bg-white rounded-xl shadow-sm p-5">
+    <h2 class="font-bold text-slate-800 mb-1">P2 · Status de entrega</h2>
+    <p class="text-xs text-slate-500 mb-3">Pipeline logístico.</p>
+    <div class="chart-box"><canvas id="chartStatus"></canvas></div>
+  </div>
+  <div class="bg-white rounded-xl shadow-sm p-5">
+    <h2 class="font-bold text-slate-800 mb-1">P3 · Receita por estado</h2>
+    <p class="text-xs text-slate-500 mb-3">Concentração geográfica.</p>
+    <div class="chart-box"><canvas id="chartState"></canvas></div>
+  </div>
+  <div class="bg-white rounded-xl shadow-sm p-5">
+    <h2 class="font-bold text-slate-800 mb-1">P3 · Evolução mensal</h2>
+    <p class="text-xs text-slate-500 mb-3">Série temporal (datas válidas).</p>
+    <div class="chart-box"><canvas id="chartMonthly"></canvas></div>
+  </div>
+</section>
 
-| Source | Output | Format |
-|---|---|---|
-| `sale_date` | `SaleDateSanitized` | `YYYY-MM-DD` or `INVALID` |
-| `porsche_model` | `PorscheModelSanitized` | Canonical Porsche model/trim label |
-| `model_year` | `ModelYearSanitized` | Four-digit year or `INVALID` |
-| `sale_price` | `SalesPriceSanitized` | USD amount as decimal string with two decimals |
-| `vehicle_mileage` | `VehicleMileageSanitized` | Integer miles |
-| `payment_method` | `PayMethodSanitized` | Controlled label |
-| `city` | `CitySanitized` | Title-cased city |
-| `state` | `StateSanitized` | USPS two-letter code or `INVALID` |
-| `delivery_status` | `DeliveryStatusSanitized` | Controlled label |
+<footer class="max-w-7xl mx-auto px-4 pb-8 text-xs text-slate-400">
+  Fonte: base sanitizada Porsche.
+</footer>
 
-## Sanitization rules
+<script>
+// Dados reais embutidos (sale_id, date, model, price, pay, state, status)
+const RAW = [
+  [6,null,"718 Cayman",79500,"Credit Card","MA","Delivered"],[7,"2024-03-14","911 Turbo S",235000,"Wire Transfer","WA","Delivered"],[8,"2024-04-18","Cayenne Coupe",112750,"Financing","TX","In Transit"],[9,null,"Macan S",68900,"Cash","CO","Pending"],[10,"2024-05-22","Taycan 4S",121000,"Bank Transfer","CA","Delivered"],[11,"2024-08-06","Panamera 4",104500,"Credit Card","FL","Cancelled"],[12,"2024-07-11","911 Carrera S",96300,"Lease","NY","Delivered"],[13,null,"Cayenne E-Hybrid",89750,"Wire Transfer","CA","Pending"],[14,"2024-08-19","718 Boxster",73500,"Debit Card","IL","Shipped"],[15,"2024-09-02","Macan GTS",95000,"Financing","AZ","In Transit"],[16,"2024-09-17","Taycan Turbo",153200,"ACH Payment","TX","Delivered"],[17,null,"911 GT3",241000,"Wire Transfer","NV","Pending"],[18,"2024-05-11","Panamera Turbo S",132000,"Cash","CA","Delivered"],[19,"2024-12-12","Cayenne Turbo GT",188000,"Crypto Payment","TX","Awaiting Delivery"],[20,"2024-12-25","911 Carrera Cabriolet",127800,"Credit Card","GA","Delivered"],[21,"2025-01-06","Macan",58900,"Bank Transfer","FL","Pending"],[22,null,"718 Spyder RS",164000,"Financing","OR","In Transit"],[23,"2025-02-14","Taycan Cross Turismo",118500,"Wire Transfer","NC","Delivered"],[24,null,"Cayenne S",91300,"Credit Card","TN","Pending"],[25,"2025-03-21","911 Targa 4S",158750,"Lease","MN","Delivered"],[26,"2025-03-28","Panamera",72000,"Bank Transfer","PA","Cancelled"],[27,"2025-04-09","Macan Electric",86500,"Wire Transfer","TX","Delivered"],[28,null,"911 Dakar",270000,"Cash","UT","Awaiting Pickup"],[29,"2025-05-12","Taycan GTS",139000,"Financing","NC","In Transit"],[30,"2025-06-18","Cayenne",76800,"Credit Card","MI","Delivered"],[31,null,"718 Cayman GT4 RS",173600,"Wire Transfer","OH","Pending"],[32,"2025-07-07","911 Carrera GTS",119900,"Cash","IN","Delivered"],[33,"2025-07-22","Panamera 4 E-Hybrid",109250,"Lease","TX","In Transit"],[34,"2025-08-14","Macan T",82000,"Wire Transfer","FL","Delivered"],[35,"2025-09-01","Taycan Turbo S",214000,"Crypto Payment","CA","Pending Review"],[36,null,"911 Carrera",124500,"Credit Card","FL","Delivered"],[37,"2025-09-18","Cayenne S",98200,"Bank Transfer","CA","Pending"],[38,"2025-10-04","Macan",67500,"Financing","OH","Delivered"],[39,"2025-10-12","Taycan",116900,"Wire Transfer","WI","In Transit"],[40,"2025-10-29","Panamera 4S",112000,"Cash","MO","Delivered"],[41,"2025-02-11","718 Boxster",74000,"Debit Card","NE","Cancelled"],[42,"2025-11-16","911 Turbo",198300,"Wire Transfer","NM","Awaiting Delivery"],[43,null,"Cayenne Coupe",103750,"Wire Transfer","AZ","Pending"],[44,null,"Macan GTS",93600,"Financing","CA","Shipped"],[45,"2025-12-07","Taycan 4S",129000,"ACH Payment","VA","In Transit"],[46,"2025-12-22","Panamera Turbo",136000,"Credit Card","CO","Delivered"],[47,null,"911 GT3 RS",286500,"Wire Transfer","TX","Pending"],[48,"2026-01-08","Cayenne E-Hybrid",92800,"Lease","CA","Delivered"],[49,"2026-01-15","Macan T",72400,"Cash","AZ","Awaiting Pickup"],[50,"2026-01-28","Taycan Turbo",158500,"Crypto Payment","GA","Delivered"],[51,"2026-02-03","718 Cayman",69900,"Bank Transfer","CA","Pending"],[52,null,"911 Targa 4",141250,"Financing","CA","In Transit"],[53,"2026-02-19","Panamera",71500,"Wire Transfer","OK","Delivered"],[54,"2026-02-25","Cayenne Turbo",146800,"Credit Card","KS","Pending"],[55,"2026-03-01","Macan Electric",89700,"Lease","LA","Delivered"],[56,"2026-03-14","911 Carrera S",104600,"Bank Transfer","HI","Cancelled"],[57,null,"Taycan GTS",142000,"Wire Transfer","CA","Delivered"],[58,"2026-04-08","Cayenne",78400,"Cash","NV","Awaiting Review"],[59,null,"718 Spyder RS",169000,"Financing","KY","In Transit"],[60,"2026-04-21","911 Dakar",268900,"Credit Card","CA","Delivered"],[61,"2026-04-29","Panamera 4",101300,"Wire Transfer","TX","Pending"],[62,"2026-05-05","Macan S",66750,"Cash","MO","Delivered"],[63,"2026-05-14","Taycan Cross Turismo",127900,"Lease","PA","In Transit"],[64,"2026-05-23","Cayenne Turbo GT",200000,"Wire Transfer","OH","Delivered"],[65,"2026-06-02","911 Carrera Cabriolet",132000,"Crypto Payment","AK","Pending Review"],[66,"2026-06-15","718 Cayman GT4 RS",176400,"Credit Card","TX","Delivered"],[67,null,"Panamera 4 E-Hybrid",108500,"Bank Transfer","NJ","Cancelled"],[68,"2026-07-07","Macan",59000,"Financing","NC","Awaiting Delivery"],[69,"2026-07-20","Taycan Turbo S",218000,"Wire Transfer","NE","Pending"],[70,null,"Cayenne S",99950,"Debit Card","NJ","Delivered"],[71,"2026-04-08","911 Carrera GTS",121750,"Credit Card","AZ","Delivered"],[72,"2026-08-18","718 Boxster GTS",91500,"Lease","NV","Shipped"],[73,"2026-08-31","Panamera Turbo S",134000,"Wire Transfer","NY","In Transit"],[74,"2026-09-09","Macan GTS",96800,"ACH Payment","NC","Delivered"],[75,"2026-09-17","Taycan 4S",131600,"Wire Transfer","TX","Pending"],[76,"2026-09-28","Cayenne E-Hybrid",94300,"Cash","WI","Delivered"],[77,"2026-10-06","911 Turbo S",242000,"Crypto Payment","TX","Awaiting Pickup"],[78,"2026-10-16","718 Cayman S",82750,"Credit Card","OH","Cancelled"],[79,"2026-10-29","Macan Electric",91300,"Wire Transfer","CA","Delivered"],[80,"2026-11-03","Panamera",79900,"Financing","TX","Pending"],[81,null,"Cayenne Coupe",111000,"Bank Transfer","TX","In Transit"],[82,"2026-12-11","911 Targa 4S",156500,"Cash","VA","Delivered"],[83,"2026-12-24","Taycan",119900,"Lease","AZ","Pending"],[84,null,"Macan T",73200,"Wire Transfer","VA","Delivered"],[85,"2026-12-28","911 GT3",224000,"Wire Transfer","ID","Awaiting Delivery"],[86,"2027-01-15","911 Carrera",126900,"Credit Card","FL","Delivered"],[87,"2027-01-29","Cayenne",84500,"Bank Transfer","CA","Pending"],[88,"2027-02-11","Macan S",69800,"Financing","FL","Delivered"],[89,null,"Taycan 4S",132700,"Wire Transfer","CO","In Transit"],[90,"2027-03-05","Panamera",81000,"Cash","TX","Delivered"],[91,"2027-03-18","718 Cayman",78900,"Debit Card","WA","Cancelled"],[92,"2027-04-02","911 Turbo S",249300,"Wire Transfer","MA","Awaiting Delivery"],[93,null,"Cayenne Coupe",108750,"Wire Transfer","AZ","Pending"],[94,null,"Macan Electric",92600,"Financing","IL","Shipped"],[95,"2027-05-12","Taycan Turbo",164000,"ACH Payment","TX","In Transit"],[96,"2027-05-27","Panamera 4S",119000,"Credit Card","CA","Delivered"],[97,null,"911 GT3",232500,"Wire Transfer","NV","Pending"],[98,"2027-06-18","Cayenne E-Hybrid",96800,"Lease","NC","Delivered"],[99,"2027-07-03","Macan T",74400,"Cash","AZ","Awaiting Pickup"],[100,"2027-07-22","Taycan GTS",148500,"Crypto Payment","GA","Delivered"],[101,"2027-08-08","718 Boxster",71900,"Bank Transfer","CA","Pending"],[102,null,"911 Targa 4",143250,"Financing","CA","In Transit"],[103,"2027-09-19","Panamera Turbo",137500,"Wire Transfer","OK","Delivered"],[104,"2027-09-25","Cayenne Turbo GT",204800,"Credit Card","KS","Pending"],[105,"2027-10-01","911 Dakar",271700,"Lease","LA","Delivered"]
+].map(r => ({ date: r[1], model: r[2], price: r[3], pay: r[4], state: r[5], status: r[6] }));
 
-### Dates
+const fmtUSD = n => n.toLocaleString('en-US', {style:'currency', currency:'USD', maximumFractionDigits:0});
+const uniq = arr => [...new Set(arr)].sort();
+const charts = {};
+function destroyChart(key) { if (charts[key]) { charts[key].destroy(); delete charts[key]; } }
 
-Normalize to ISO `YYYY-MM-DD`.
+const selModel = document.getElementById('filterModel');
+const selState = document.getElementById('filterState');
+uniq(RAW.map(d => d.model)).forEach(m => selModel.add(new Option(m, m)));
+uniq(RAW.map(d => d.state)).forEach(s => selState.add(new Option(s, s)));
 
-Accept common formats:
+function getFiltered() {
+  return RAW.filter(d => (!selModel.value || d.model === selModel.value) && (!selState.value || d.state === selState.value));
+}
 
-- `YYYY-MM-DD`
-- `YYYY/MM/DD`
-- `YYYY.MM.DD`
-- `MM/DD/YYYY`
-- `MM/DD/YY`
-- `MM-DD-YY`
-- `Month DDth, YYYY`
-- `Mon DDth YYYY`
+document.getElementById('resetFilters').addEventListener('click', () => { selModel.value = ''; selState.value = ''; render(); });
+[selModel, selState].forEach(s => s.addEventListener('change', render));
 
-Invalid calendar dates such as `2024-13-05`, `2024-02-30`, `April 31st, 2024`, and `2027-06-40` must become `INVALID`.
+function render() {
+  const data = getFiltered();
+  const count = data.length;
+  const revenue = data.reduce((a, d) => a + d.price, 0);
+  document.getElementById('kpiCount').textContent = count;
+  document.getElementById('kpiRevenue').textContent = fmtUSD(revenue);
+  document.getElementById('kpiAvg').textContent = fmtUSD(count ? revenue / count : 0);
+  document.getElementById('dataQuality').innerHTML = `Base: ${RAW.length} vendas<br>Filtro: ${count} vendas`;
 
-### Porsche models
+  const byModel = {};
+  data.forEach(d => { byModel[d.model] = (byModel[d.model] || 0) + d.price; });
+  const modelEntries = Object.entries(byModel).sort((a, b) => b[1] - a[1]).slice(0, 8);
+  destroyChart('modelRevenue');
+  charts.modelRevenue = new Chart(document.getElementById('chartModelRevenue'), {
+    type: 'bar',
+    data: { labels: modelEntries.map(e => e[0]), datasets: [{ label: 'Receita', data: modelEntries.map(e => e[1]), backgroundColor: '#d5001c', borderRadius: 4 }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: v => fmtUSD(v) } } } }
+  });
 
-Normalize model names to canonical title case. Preserve valid trims such as:
+  const byPay = {};
+  data.forEach(d => { byPay[d.pay] = (byPay[d.pay] || 0) + d.price; });
+  const payEntries = Object.entries(byPay).sort((a, b) => b[1] - a[1]);
+  destroyChart('payment');
+  charts.payment = new Chart(document.getElementById('chartPayment'), {
+    type: 'doughnut',
+    data: { labels: payEntries.map(e => e[0]), datasets: [{ data: payEntries.map(e => e[1]), backgroundColor: ['#0f766e','#0ea5e9','#8b5cf6','#f59e0b','#ef4444','#84cc16','#ec4899'], borderWidth: 2, borderColor: '#fff' }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' } } }
+  });
 
-- `911 Carrera`
-- `911 Carrera S`
-- `911 Carrera GTS`
-- `911 Turbo`
-- `911 Turbo S`
-- `911 GT3`
-- `911 GT3 RS`
-- `911 Dakar`
-- `911 Targa 4`
-- `911 Targa 4S`
-- `718 Cayman`
-- `718 Cayman S`
-- `718 Cayman GT4 RS`
-- `718 Boxster`
-- `718 Boxster GTS`
-- `718 Spyder RS`
-- `Cayenne`
-- `Cayenne S`
-- `Cayenne Coupe`
-- `Cayenne E-Hybrid`
-- `Cayenne Turbo`
-- `Cayenne Turbo GT`
-- `Macan`
-- `Macan S`
-- `Macan T`
-- `Macan GTS`
-- `Macan Electric`
-- `Panamera`
-- `Panamera 4`
-- `Panamera 4S`
-- `Panamera Turbo`
-- `Panamera Turbo S`
-- `Panamera 4 E-Hybrid`
-- `Taycan`
-- `Taycan 4S`
-- `Taycan GTS`
-- `Taycan Turbo`
-- `Taycan Turbo S`
-- `Taycan Cross Turismo`
+  const byStatus = {};
+  data.forEach(d => { byStatus[d.status] = (byStatus[d.status] || 0) + 1; });
+  const statusEntries = Object.entries(byStatus).sort((a, b) => b[1] - a[1]);
+  destroyChart('status');
+  charts.status = new Chart(document.getElementById('chartStatus'), {
+    type: 'bar',
+    data: { labels: statusEntries.map(e => e[0]), datasets: [{ data: statusEntries.map(e => e[1]), backgroundColor: 'rgba(14,165,233,0.7)', borderRadius: 4 }] },
+    options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+  });
 
-Unknown models should be title-cased rather than dropped.
+  const byState = {};
+  data.forEach(d => { byState[d.state] = (byState[d.state] || 0) + d.price; });
+  const stateEntries = Object.entries(byState).sort((a, b) => b[1] - a[1]).slice(0, 10);
+  destroyChart('state');
+  charts.state = new Chart(document.getElementById('chartState'), {
+    type: 'bar',
+    data: { labels: stateEntries.map(e => e[0]), datasets: [{ data: stateEntries.map(e => e[1]), backgroundColor: 'rgba(245,158,11,0.8)', borderRadius: 4 }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+  });
 
-### Model year
+  const byMonth = {};
+  data.forEach(d => { if (!d.date) return; const k = d.date.slice(0, 7); byMonth[k] = (byMonth[k] || 0) + d.price; });
+  const monthEntries = Object.entries(byMonth).sort((a, b) => a[0].localeCompare(b[0]));
+  destroyChart('monthly');
+  charts.monthly = new Chart(document.getElementById('chartMonthly'), {
+    type: 'line',
+    data: { labels: monthEntries.map(e => e[0]), datasets: [{ data: monthEntries.map(e => e[1]), borderColor: '#0f766e', backgroundColor: 'rgba(15,118,110,0.12)', fill: true, tension: 0.25 }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+  });
+}
 
-Normalize to a four-digit year. Convert common text forms like `twenty twenty four` and formats like `20-24` or `20 24`. Values outside `1990` to `2035` should become `INVALID`.
-
-### Sales price
-
-Normalize to a decimal USD amount without symbols, commas, or text.
-
-Examples:
-
-- `$985,000.00` -> `985000.00`
-- `870000 USD` -> `870000.00`
-- `$645k` -> `645000.00`
-- `188k USD` -> `188000.00`
-- `eighty two thousand USD` -> `82000.00`
-- `two hundred thousand USD` -> `200000.00`
-
-### Vehicle mileage
-
-Normalize to integer miles.
-
-Examples:
-
-- `12,500 miles` -> `12500`
-- `Miles: 15,200` -> `15200`
-- `zero miles`, `new`, `0 mi`, `new car` -> `0`
-- `twelve thousand miles` -> `12000`
-
-If a value is explicitly labeled `KM`, convert kilometers to miles using `1 km = 0.621371 miles`, rounded to the nearest integer.
-
-### Payment method
-
-Normalize to one of:
-
-- `Credit Card`
-- `Debit Card`
-- `Bank Transfer`
-- `Wire Transfer`
-- `Financing`
-- `Lease`
-- `Cash`
-- `ACH Payment`
-- `Crypto Payment`
-
-Unknown payment methods should be title-cased.
-
-### City
-
-Normalize city names to title case and preserve known punctuation such as `St. Louis`.
-
-### State
-
-Normalize US states to USPS two-letter codes. Convert both names and abbreviations, case-insensitively.
-
-Examples:
-
-- `California` -> `CA`
-- `california` -> `CA`
-- `ca` -> `CA`
-- `New York` -> `NY`
-
-Unknown states should become `INVALID`.
-
-### Delivery status
-
-Normalize to one of:
-
-- `Delivered`
-- `Pending`
-- `In Transit`
-- `Cancelled`
-- `Awaiting Delivery`
-- `Awaiting Pickup`
-- `Pending Approval`
-- `Pending Review`
-- `Shipped`
-- `Awaiting Review`
-
-Handle punctuation, case, hyphenation, and common typo `DELIVERD`.
-
-## Quality checks
-
-After normalization, verify:
-
-- No original columns were removed.
-- Sanitized columns appear immediately after their source columns.
-- Dates are ISO format or `INVALID`.
-- State values are two-letter USPS codes or `INVALID`.
-- Mileage is integer miles.
-- Price is numeric with two decimals.
-- No new blank values are introduced in sanitized columns; use `INVALID` or normalized defaults instead.
-
-## Invalid handling
-
-Use `INVALID` when a value cannot be normalized safely. Never leave a sanitized field blank.
+render();
+</script>
+</body>
+</html>
